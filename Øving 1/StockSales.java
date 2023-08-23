@@ -3,9 +3,20 @@ import java.util.Map;
 import java.util.Random;
 
 public class StockSales {
+  /*
+   * Map of day and price change
+   */
   static Map<Integer, Integer> priceChange = new HashMap<>();
+  /*
+   * Random number generator
+   */
   static Random random = new Random();
 
+  /*
+   * Finds the maximum profit of a stock sale
+   * @param priceChange Map of day and price change
+   * @return String with buy day, sell day and profit
+   */
   private static String maxProfit(Map<Integer, Integer> priceChange) {
     if (priceChange.size() == 0) {
       return "No prices provided";
@@ -35,6 +46,14 @@ public class StockSales {
     return "Buy on day " + buyDay + " and sell on day " + sellDay + " for a profit of $" + maxProfit;
   }
 
+  /*
+   * Main method
+   * Creates a map of 100 days with random price changes
+   * Prints the maximum profit
+   * Prints the time it takes to run the method
+   * @param args Command line arguments
+   * @return void
+   */
   public static void main(String[] args) {
     for (int i = 0; i < 100; i++) {
       int randomNumber = random.nextInt(19) - 9;
