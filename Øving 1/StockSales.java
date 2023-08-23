@@ -4,6 +4,15 @@ public class StockSales {
 
     private static Random random = new Random();
 
+    /*
+     * Method that takes an array of stock prices and returns the best day to buy and sell for maximum profit.
+     * The method returns a string with the following format:
+     * "Buy on day X and sell on day Y for a profit of $Z"
+     * 
+     * @param stockPrices An array of stock prices
+     * @return A string with the best day to buy and sell for maximum profit
+     */
+
     private static String maxProfit(int[] stockPrices) {
         if (stockPrices.length == 0) {
             return "No prices provided";
@@ -33,6 +42,13 @@ public class StockSales {
         return "Buy on day " + buyDay + " and sell on day " + sellDay + " for a profit of $" + maxProfit;
     }
 
+    /*
+     * Method that generates an array of random integers representing the price changes of a stock.
+     * The array will have the specified amount of elements.
+     * 
+     * @param amount The amount of elements in the array
+     * @return An array of random integers
+     */
     private static int[] generateRandomPriceChanges(int amount) {
         int[] priceChanges = new int[amount];
         for (int i = 0; i < amount; i++) {
@@ -41,6 +57,12 @@ public class StockSales {
         return priceChanges;
     }
 
+    /*
+     * Method that generates an array of stock prices based on the price changes.
+     * 
+     * @param priceChanges An array of price changes
+     * @return An array of stock prices
+     */
     private static int[] generateStockPrices(int[] priceChanges) {
         int[] stockPrices = new int[priceChanges.length];
         int cumulativePrice = 0;
@@ -51,12 +73,24 @@ public class StockSales {
         return stockPrices;
     }
 
+    /*
+     * Main method that tests the performance of the maxProfit method.
+     * 
+     * @param args Command line arguments
+     */
     public static void main(String[] args) {
         testPerformance(100000);
         testPerformance(1000000);
         testPerformance(10000000);
     }
 
+    /*
+     * Method that tests the performance of the maxProfit method.
+     * Prints the amount of days and the time it took to run the method.
+     * 
+     * @param days The amount of days to test
+     * @return An array of stock prices
+     */
     private static void testPerformance(int days) {
         int[] priceChanges = generateRandomPriceChanges(days);
         int[] stockPrices = generateStockPrices(priceChanges);
