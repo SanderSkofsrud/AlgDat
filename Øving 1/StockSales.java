@@ -18,21 +18,27 @@ public class StockSales {
             return "No prices provided";
         }
 
+        // Assume the first price is the minimum price
         int minPrice = stockPrices[0];
         int minPriceDay = 0;
         int maxProfit = Integer.MIN_VALUE;
         int buyDay = 0;
         int sellDay = 0;
 
+        // Loop through the prices starting at the second price
         for (int i = 1; i < stockPrices.length; i++) {
             int currentPrice = stockPrices[i];
 
+            // If the difference between the current price and the minimum price is greater
+            // than the current maximum profit, update the maximum profit and the buy and sell days
             if (currentPrice - minPrice > maxProfit) {
                 maxProfit = currentPrice - minPrice;
                 buyDay = minPriceDay;
                 sellDay = i;
             }
 
+            // If the current price is less than the minimum price, update the minimum price
+            // and the day it occurred
             if (currentPrice < minPrice) {
                 minPrice = currentPrice;
                 minPriceDay = i;
@@ -82,6 +88,8 @@ public class StockSales {
         testPerformance(100000);
         testPerformance(1000000);
         testPerformance(10000000);
+        testPerformance(100000000);
+
     }
 
     /*
