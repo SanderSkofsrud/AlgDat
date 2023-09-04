@@ -1,6 +1,7 @@
 import time
 import tkinter as tk
 import random
+import numpy as np
 
 def recursive_multiplication1(n, x):
     """
@@ -70,9 +71,38 @@ def test_multiplication(n, x, times1, times2):
     print(f"Time taken by method 2: {time2} nanoseconds\n")
 
 
+def linear_regression(x, y):
+    """
+    Computes the slope and y-intercept of the best-fit line using linear regression.
+    
+    Parameters:
+    - x: List of x values.
+    - y: List of y values.
+    
+    Returns:
+    - Slope and y-intercept of the best-fit line.
+    """
+    m, b = np.polyfit(x, y, 1)
+    return m, b
+
+def logarithmic_regression(x, y):
+    """
+    Computes the parameters of the best-fit logarithmic curve.
+    
+    Parameters:
+    - x: List of x values.
+    - y: List of y values.
+    
+    Returns:
+    - Parameters a and b of the best-fit curve y = a + b * log(x).
+    """
+    log_x = np.log(x)
+    b, a = np.polyfit(log_x, y, 1)
+    return a, b
+
 def plot_graph(times1, times2, test_cases):
     """
-    Plots the time taken by the two multiplication methods.
+    Plots the regression lines for the two multiplication methods.
     
     Parameters:
     - times1: List of time results for method 1.
@@ -90,28 +120,27 @@ def plot_graph(times1, times2, test_cases):
     max_time = max(max(times1), max(times2))
     scaling_factor = (canvas_height - 50) / max_time
 
-    for i, n in enumerate(test_cases):
-        x_pos = (i + 1) * canvas_width / (len(test_cases) + 1)
+    # Compute regression lines for Method 1 (linear)
+    m1, b1 = linear_regression(test_cases, times1)
 
-        y_pos1 = canvas_height - times1[i] * scaling_factor
-        y_pos2 = canvas_height - times2[i] * scaling_factor
+    # Compute regression lines for Method 2 (logarithmic)
+    a2, b2 = logarithmic_regression(test_cases, times2)
 
-        canvas.create_oval(x_pos-3, y_pos1-3, x_pos+3, y_pos1+3, fill="blue", width=2)
-        canvas.create_oval(x_pos-3, y_pos2-3, x_pos+3, y_pos2+3, fill="red", width=2)
-        canvas.create_text(x_pos, canvas_height - 10, text=str(n), anchor=tk.S)
+    for i in range(len(test_cases)-1):
+        x1 = (i + 1) * canvas_width / (len(test_cases) + 1)
+        x2 = (i + 2) * canvas_width / (len(test_cases) + 1)
 
-        if i > 0:
-            prev_x_pos = (i) * canvas_width / (len(test_cases) + 1)
-            prev_y_pos1 = canvas_height - times1[i-1] * scaling_factor
-            prev_y_pos2 = canvas_height - times2[i-1] * scaling_factor
-            canvas.create_line(prev_x_pos, prev_y_pos1, x_pos, y_pos1, fill="blue")
-            canvas.create_line(prev_x_pos, prev_y_pos2, x_pos, y_pos2, fill="red")
+        y1_method1 = canvas_height - (m1 * test_cases[i] + b1) * scaling_factor
+        y2_method1 = canvas_height - (m1 * test_cases[i+1] + b1) * scaling_factor
 
-        canvas.create_text(x_pos, y_pos1 - 10, text=f"{times1[i]:.0f} ns", anchor=tk.S)
-        canvas.create_text(x_pos, y_pos2 - 20, text=f"{times2[i]:.0f} ns", anchor=tk.S)
+        y1_method2 = canvas_height - (a2 + b2 * np.log(test_cases[i])) * scaling_factor
+        y2_method2 = canvas_height - (a2 + b2 * np.log(test_cases[i+1])) * scaling_factor
 
-    canvas.create_text(50, 20, text="Method 1", fill="blue")
-    canvas.create_text(150, 20, text="Method 2", fill="red")
+        canvas.create_line(x1, y1_method1, x2, y2_method1, fill="blue")
+        canvas.create_line(x1, y1_method2, x2, y2_method2, fill="red")
+
+    canvas.create_text(50, 20, text="Method 1 (Linear)", fill="blue")
+    canvas.create_text(200, 20, text="Method 2 (Logarithmic)", fill="red")
 
     root.mainloop()
 
@@ -122,7 +151,7 @@ if __name__ == "__main__":
     times2 = []
 
     # Test cases
-    test_cases = [5, 10, 25, 50, 75, 100, 150, 250, 300, 400, 500, 600, 700, 800,]
+    test_cases = [i for i in range(1, 100)]
     for n in test_cases:
         test_multiplication(n, x, times1, times2)
     
