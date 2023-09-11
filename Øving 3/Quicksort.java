@@ -1,3 +1,5 @@
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Random;
 
 public class Quicksort {
@@ -28,6 +30,29 @@ public class Quicksort {
   }
 
   /**
+   * Quicksort algorithm.
+   * If the array size is smaller than the threshold, it uses ShellSort.
+   * Otherwise, it uses Dual Pivot Quicksort.
+   * This method allows the user to specify a custom threshold,
+   * and is used for testing for the optimal threshold value.
+   *
+   * Time Complexity: Θ(n log n) in the average case.
+   * This is the average-case time complexity. In the worst case, it can be O(n^2).
+   *
+   * @param arr   The array to be sorted.
+   * @param left  The left index of the subarray to be sorted.
+   * @param right The right index of the subarray to be sorted.
+   * @param threshold The threshold for switching to ShellSort.
+   */
+  public static void quicksortWithShellSortHelperAndCustomThreshold(int[] arr, int left, int right, int threshold) {
+    if (right - left + 1 < threshold) {
+      shellSort(arr, left, right);
+    } else {
+      dualPivotQuicksort(arr, left, right, threshold);
+    }
+  }
+
+  /**
    * Dual Pivot Quicksort algorithm.
    *
    * @param arr       The array to be sorted.
@@ -42,9 +67,13 @@ public class Quicksort {
       median3sort(arr, low, high); // Use median-of-three to select pivots
       partitionDualPivot(arr, low, high, pivots);
 
-      quicksortWithShellSortHelper(arr, low, pivots[0] - 1);
-      quicksortWithShellSortHelper(arr, pivots[0] + 1, pivots[1] - 1);
-      quicksortWithShellSortHelper(arr, pivots[1] + 1, high);
+      //quicksortWithShellSortHelper(arr, low, pivots[0] - 1);
+      //quicksortWithShellSortHelper(arr, pivots[0] + 1, pivots[1] - 1);
+      //quicksortWithShellSortHelper(arr, pivots[1] + 1, high);
+
+      quicksortWithShellSortHelperAndCustomThreshold(arr, low, pivots[0] - 1, threshold);
+      quicksortWithShellSortHelperAndCustomThreshold(arr, pivots[0] + 1, pivots[1] - 1, threshold);
+      quicksortWithShellSortHelperAndCustomThreshold(arr, pivots[1] + 1, high, threshold);
     }
   }
 
@@ -286,7 +315,7 @@ public class Quicksort {
 //     */
 //    public static void testSortingPerformanceWithGraphs() {
 //        int[] sizes = { 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000 };
-//        int[] thresholds = { 10, 30, 50, 70, 100 }; // Try different threshold values
+//        int[] thresholds = { 10, 30, 50, 70, 100, 130, 150, 170, 200}; // Try different threshold values
 //        long[][] results = new long[thresholds.length][sizes.length]; // To store times for different thresholds and sizes
 //
 //        for (int thresholdIndex = 0; thresholdIndex < thresholds.length; thresholdIndex++) {
@@ -296,14 +325,14 @@ public class Quicksort {
 //                int size = sizes[sizeIndex];
 //                System.out.println("Testing size: " + size);
 //                long[] timeResults = new long[5]; // To store times for 5 runs
-//                int[] data = randomDataArray(boundSize, size);
+//                int[] data = randomDataArray(BOUND_SIZE, size);
 //
 //                int initialChecksum = checksum(data); // Calculate initial checksum
 //
 //                for (int i = 0; i < 5; i++) {
 //                    int[] copy = data.clone(); // Create a copy to ensure fairness in testing
 //                    long startTime = System.currentTimeMillis();
-//                    quicksortWithShellSortHelper(copy, 0, size - 1);
+//                    quicksortWithShellSortHelperAndCustomThreshold(copy, 0, size - 1, threshold);
 //                    long endTime = System.currentTimeMillis();
 //                    assert isSorted(copy) : "Sorting failed on random dataset!";
 //                    assert initialChecksum == checksum(copy) : "Checksum failed on random dataset! Some values might have been overwritten.";
@@ -320,6 +349,22 @@ public class Quicksort {
 //                results[thresholdIndex][sizeIndex] = avgTime; // Store the result. Can be used to generate graphs
 //
 //                System.out.println("Average time for size " + size + ": " + avgTime + " milliseconds");
+//            }
+//            //write the results to a csv file
+//            try {
+//                FileWriter writer = new FileWriter("results.csv");
+//                for (int i = 0; i < sizes.length; i++) {
+//                    writer.append(Integer.toString(sizes[i]));
+//                    for (int j = 0; j < thresholds.length; j++) {
+//                        writer.append(",");
+//                        writer.append(Long.toString(results[j][i]));
+//                    }
+//                    writer.append("\n");
+//                }
+//                writer.flush();
+//                writer.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
 //            }
 //        }
 //    }
