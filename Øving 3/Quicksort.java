@@ -42,9 +42,9 @@ public class Quicksort {
       median3sort(arr, low, high); // Use median-of-three to select pivots
       partitionDualPivot(arr, low, high, pivots);
 
-      dualPivotQuicksort(arr, low, pivots[0] - 1, threshold);
-      dualPivotQuicksort(arr, pivots[0] + 1, pivots[1] - 1, threshold);
-      dualPivotQuicksort(arr, pivots[1] + 1, high, threshold);
+      quicksortWithShellSortHelper(arr, low, pivots[0] - 1);
+      quicksortWithShellSortHelper(arr, pivots[0] + 1, pivots[1] - 1);
+      quicksortWithShellSortHelper(arr, pivots[1] + 1, high);
     }
   }
 
