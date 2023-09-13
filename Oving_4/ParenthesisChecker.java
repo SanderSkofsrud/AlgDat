@@ -6,11 +6,17 @@ import java.util.Stack;
 /**
  * The ParenthesisChecker class provides a method to check if a given source code file
  * has the correct nesting and pairing of parentheses, brackets, and braces.
+ *
+ * Save the code in a file named ParenthesisChecker.java.
+ * Compile the code with the command javac ParenthesisChecker.java.
+ * Run the program with the command java ParenthesisChecker <filename>, where <filename> is the name of the source code you want to check.
  */
 public class ParenthesisChecker {
 
   /**
    * The main entry point for the application. It expects a filename as an argument.
+   * Time complexity: O(n), where n is the number of characters in the file.
+   *
    * @param args Command line arguments. The first argument should be the filename.
    */
   public static void main(String[] args) {
@@ -30,6 +36,8 @@ public class ParenthesisChecker {
   /**
    * Checks if the provided file has the correct nesting and pairing of parentheses.
    * Any mismatch or incorrect nesting is printed to the console.
+   * Time complexity: O(n), where n is the number of characters in the file.
+   *
    * @param filename The name of the file to check.
    * @throws IOException If there's an error reading the file.
    */
@@ -73,6 +81,8 @@ public class ParenthesisChecker {
 
   /**
    * Checks if the provided characters form a matching pair of parentheses.
+   * Time complexity: O(1).
+   *
    * @param open The opening parenthesis character.
    * @param close The closing parenthesis character.
    * @return true if they form a matching pair, false otherwise.
