@@ -1,7 +1,8 @@
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.LinkedList;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
+import java.util.Scanner;
 
 /**
  * This class represents a hash table implementation using linked lists for collision resolution.
@@ -26,10 +27,9 @@ public class HashTable {
    *
    * @param size The initial size of the hash table.
    */
-  @SuppressWarnings("unchecked")
   public HashTable(int size) {
     this.SIZE = size;
-    table = (LinkedList<String>[]) new LinkedList[SIZE];
+    table = new LinkedList[SIZE];
     for (int i = 0; i < SIZE; i++) {
       table[i] = new LinkedList<>();
     }
@@ -78,22 +78,6 @@ public class HashTable {
   }
 
   /**
-   * Reads names from a file and inserts them into the hash table.
-   *
-   * @param filename The path to the file.
-   */
-  public void readFromFileAndInsert(String filename) {
-    try {
-      List<String> lines = Files.readAllLines(Paths.get(filename));
-      for (String line : lines) {
-        put(line.trim());
-      }
-    } catch (Exception e) {
-      System.out.println("Error reading the file: " + e.getMessage());
-    }
-  }
-
-  /**
    * Returns the load factor of the hash table.
    *
    * @return The current load factor.
@@ -137,10 +121,51 @@ public class HashTable {
    * @return The next prime number.
    */
   private static int nextPrime(int n) {
+    if (n % 2 == 0) n++;
     while (!isPrime(n)) {
-      n++;
+      n += 2;
     }
     return n;
+  }
+
+  /**
+   * Reads names from a URL and inserts them into the hash table.
+   *
+   * @param fileURL The URL to the file.
+   */
+  public void readFromURLAndInsert(String fileURL) {
+    try {
+      URL url = new URL(fileURL);
+      Scanner scanner = new Scanner(url.openStream());
+      while (scanner.hasNextLine()) {
+        String line = scanner.nextLine();
+        put(line.trim());
+      }
+      scanner.close();
+    } catch (Exception e) {
+      System.out.println("Error reading the file: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Reads content from a URL and returns it as a list of strings.
+   *
+   * @param fileURL The URL to the file.
+   * @return List of strings read from the URL.
+   */
+  public static List<String> readLinesFromURL(String fileURL) {
+    List<String> lines = new ArrayList<>();
+    try {
+      URL url = new URL(fileURL);
+      Scanner scanner = new Scanner(url.openStream());
+      while (scanner.hasNextLine()) {
+        lines.add(scanner.nextLine().trim());
+      }
+      scanner.close();
+    } catch (Exception e) {
+      System.out.println("Error reading the file: " + e.getMessage());
+    }
+    return lines;
   }
 
   /**
@@ -149,13 +174,11 @@ public class HashTable {
    * @param args Command-line arguments (not used).
    */
   public static void main(String[] args) {
-    int estimatedSize = 2 * 135;
+    int estimatedSize = (int) Math.floor(1.25 * 135);
     int optimizedSize = nextPrime(estimatedSize);
     HashTable ht = new HashTable(optimizedSize);
 
-    //TODO: Fiks bedre løsning enn dette:)
-    String filename = "C:\\Users\\sande\\OneDrive\\Dokumenter\\Skole\\H23\\AlgDat\\Oving_5\\navn.txt";
-    ht.readFromFileAndInsert(filename);
+    ht.readFromURLAndInsert("https://www.idi.ntnu.no/emner/idatt2101/hash/navn.txt");
 
     System.out.println("Load Factor: " + ht.getLoadFactor());
     System.out.println("Total Collisions: " + ht.numOfCollisions);
@@ -163,7 +186,7 @@ public class HashTable {
 
     // Test: Check if all names from the file are in the hash table
     try {
-      List<String> lines = Files.readAllLines(Paths.get(filename));
+      List<String> lines = readLinesFromURL("https://www.idi.ntnu.no/emner/idatt2101/hash/navn.txt");
       int notFoundCount = 0;
       for (String line : lines) {
         if (!ht.contains(line.trim())) {
