@@ -1,5 +1,7 @@
 import sys
 from collections import deque
+import networkx as nx
+import matplotlib.pyplot as plt
 
 
 class Graph:
@@ -130,6 +132,21 @@ class Graph:
         return graph
 
 
+def plot_graph(graph):
+    G = nx.DiGraph()  # Create a directed graph using networkx
+
+    # Add nodes and edges to the networkx graph
+    for node, neighbors in graph.adj_list.items():
+        for neighbor in neighbors:
+            G.add_edge(node, neighbor)
+
+    # Draw the graph
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_size=500, node_color="skyblue")
+    plt.title("Graph Visualization")
+    plt.show()
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: python Graph.py <input_file> [start_node]")
@@ -137,6 +154,9 @@ if __name__ == '__main__':
 
     file_name = sys.argv[1]
     graph = Graph.from_file(file_name)
+
+    # Plot the graph
+    plot_graph(graph)
 
     # If a start node is provided, use it. Otherwise, default to 0.
     start_node = int(sys.argv[2]) if len(sys.argv) > 2 else 0
