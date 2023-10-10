@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 class Graph:
     """
     A class to represent an unweighted directed graph.
+    To run the code, use the following command:
+    python Graph.py <input_file> [start_node]
     """
 
     def __init__(self, nodes_count):
