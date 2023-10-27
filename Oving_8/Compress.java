@@ -1,9 +1,13 @@
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.PriorityQueue;
 
 /**
  * The Compress class provides methods for compressing and decompressing files
- * using a combination of Huffman coding and LZ77 (if implemented). TODO: Endre fra LZ77 hvis ikke dette brukes
+ * using a combination of Huffman coding and LZ77 (if implemented).
  */
 public class Compress {
 
@@ -102,16 +106,16 @@ public class Compress {
    * @throws IOException if an I/O error occurs.
    */
   public static void compress(String inputFile, String outputFile) throws IOException {
-    // TODO: Integrate LZ77 compression before this step, if required.
+    // LZ77 compression
+    String inputData = new String(Files.readAllBytes(Paths.get(inputFile)));
+    List<LZ77.Token> lz77Tokens = LZ77.compress(inputData);
+    byte[] lz77CompressesData = LZ77.getCompressedBytes(lz77Tokens);
 
-    InputStream is = new FileInputStream(inputFile);
+    // Frequency calculation for Huffman compression on LZ77 bytes
     int[] freq = new int[256];
-
-    int byteValue;
-    while ((byteValue = is.read()) != -1) {
-      freq[byteValue]++;
+    for (byte b : lz77CompressesData) {
+      freq[b & 0xFF]++;
     }
-
     Node root = buildTree(freq);
     String[] st = new String[256];
     StringBuilder prefix = new StringBuilder();
@@ -120,21 +124,14 @@ public class Compress {
     ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(outputFile));
     oos.writeObject(freq);
 
-    is.close();
-    is = new FileInputStream(inputFile);
+    // Huffman compression of LZ77 bytes
     BitOutputStream bos = new BitOutputStream(oos);
-
-    while ((byteValue = is.read()) != -1) {
-      String code = st[byteValue];
+    for (byte b : lz77CompressesData) {
+      String code = st[b & 0xFF];
       for (int i = 0; i < code.length(); i++) {
-        if (code.charAt(i) == '0') {
-          bos.write(false);
-        } else if (code.charAt(i) == '1') {
-          bos.write(true);
-        }
+        bos.write(code.charAt(i) == '1');
       }
     }
-    is.close();
     bos.close();
   }
 
@@ -147,32 +144,35 @@ public class Compress {
    * @throws ClassNotFoundException if the class of a serialized object cannot be found.
    */
   public static void decompress(String inputFile, String outputFile) throws IOException, ClassNotFoundException {
-    // TODO: Integrate LZ77 decompression after this step, if required.
-
     ObjectInputStream ois = new ObjectInputStream(new FileInputStream(inputFile));
     int[] freq = (int[]) ois.readObject();
     Node root = buildTree(freq);
 
-    int length = 0;
-    for (int j : freq) {
-      length += j;
-    }
-
     BitInputStream bis = new BitInputStream(ois);
-    OutputStream os = new FileOutputStream(outputFile);
+    ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
 
-    while (length > 0) {
-      Node x = root;
-      while (!isLeaf(x)) {
-        boolean bit = bis.read();
-        if (bit) x = x.right;
-        else     x = x.left;
+    // Huffman decompression
+    while (true) {
+      try {
+        Node x = root;
+        while (!isLeaf(x)) {
+          boolean bit = bis.read();
+          if (bit) x = x.right;
+          else     x = x.left;
+        }
+        byteOutput.write(x.ch);
+      } catch (EOFException e) {
+        break;
       }
-      os.write(x.ch);
-      length--;
     }
-    os.close();
     bis.close();
+    byte[] lz77CompressedData = byteOutput.toByteArray();
+
+    // LZ77 decompression
+    List<LZ77.Token> lz77Tokens = LZ77.getTokensFromBytes(lz77CompressedData);
+    String lz77DecompressedData = LZ77.decompress(lz77Tokens);
+    Files.write(Paths.get(outputFile), lz77DecompressedData.getBytes());
+
   }
 
   // Nested classes for bit manipulation
@@ -260,8 +260,17 @@ public class Compress {
    * The main method to test the compression and decompression.
    *
    * @param args The command line arguments.
+   * args[0] = "compress" or "decompress" or "c" or "d"
+   * args[1] = input file
+   * args[2] = output file (will be overwritten)
    */
   public static void main(String[] args) {
+
+    if (args.length != 3) {
+      System.out.println("Usage: java Compress.java <action> <input file> <output file>");
+      return;
+    }
+    
     String action = args[0];
     String inputFile = args[1];
     String outputFile = args[2];
@@ -278,4 +287,156 @@ public class Compress {
       e.printStackTrace();
     }
   }
+  /**
+   * The LZ77 class provides methods for compressing and decompressing text using LZ77.
+   */
+  public class LZ77 {
+    // Might want to tweak the values below
+    private static final int WINDOW_SIZE = 4096;
+    private static final int MAX_MATCH_LENGTH = 15;
+    private static final int MIN_MATCH_LENGTH = 3;
+
+    /**
+     * Compresses the given text using LZ77.
+     * 
+     * @param text The text to compress.
+     * @return A list of tokens representing the compressed text.
+     */
+
+    public static List<Token> compress(String text) {
+        List<Token> tokens = new ArrayList<>();
+        int index = 0;
+        while (index < text.length()) {
+            int bestMatchDistance = -1;
+            int bestMatchLength = -1;
+            int maxLookback = Math.min(index, WINDOW_SIZE);
+
+            for (int beginIndex = index - maxLookback; beginIndex < index; beginIndex++) {
+                int matchLength = 0;
+                while (matchLength < MAX_MATCH_LENGTH &&
+                       index + matchLength < text.length() &&
+                       text.charAt(beginIndex + matchLength) == text.charAt(index + matchLength)) {
+                    matchLength++;
+                }
+
+                if (matchLength > bestMatchLength) {
+                    bestMatchLength = matchLength;
+                    bestMatchDistance = index - beginIndex;
+                }
+            }
+
+            if (bestMatchLength >= MIN_MATCH_LENGTH) {
+              Token token = new Token(bestMatchDistance, bestMatchLength, text.charAt(index + bestMatchLength));
+              System.out.println("Token: " + token);
+              tokens.add(token);
+              index += bestMatchLength + 1;
+            } else {
+              Token token = new Token(0, 0, text.charAt(index));
+              System.out.println("Token: " + token);
+              tokens.add(token);
+              index++;
+            }
+        }
+        return tokens;
+    }
+    /**
+     * Converts the given list of tokens to a byte array.
+     * 
+     * @param tokens The tokens to convert.
+     * @return A byte array representing the tokens.
+     */
+    public static byte[] getCompressedBytes(List<Token> tokens) {
+      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+  
+      for (Token token : tokens) {
+          int highByte = ((token.matchDistance << 4) & 0xFF00) | ((token.matchLength >> 0) & 0x0F);
+          int lowByte = ((token.matchLength << 4) & 0xF0) | ((token.nextChar >> 8) & 0x0F);
+          outputStream.write(highByte);
+          outputStream.write(lowByte);
+          outputStream.write(token.nextChar & 0xFF);
+      }
+  
+      return outputStream.toByteArray();
+  }
+  
+    /**
+     * Converts the given byte array to a list of tokens.
+     * 
+     * @param data The byte array to convert.
+     * @return A list of tokens.
+     */
+    public static List<Token> getTokensFromBytes(byte[] bytes) {
+      List<Token> tokens = new ArrayList<>();
+  
+      for (int i = 0; i < bytes.length; i += 3) {
+          int highByte = bytes[i] & 0xFF;
+          int lowByte = bytes[i + 1] & 0xFF;
+          int thirdByte = bytes[i + 2] & 0xFF;
+  
+          int matchDistance = (highByte >> 4) & 0xFF;
+          int matchLength = ((highByte & 0x0F) << 4) | ((lowByte >> 4) & 0x0F);
+          char nextChar = (char) (((lowByte & 0x0F) << 8) | thirdByte);
+  
+          tokens.add(new Token(matchDistance, matchLength, nextChar));
+      }
+  
+      return tokens;
+  }
+  
+  
+    
+    /**
+     * Decompresses the given tokens using LZ77.
+     * 
+     * @param tokens The tokens to decompress.
+     * @return The decompressed text.
+     */
+    public static String decompress(List<Token> tokens) {
+        StringBuilder decompressed = new StringBuilder();
+        for (Token token : tokens) {
+            if (token.matchLength > 0) {
+                int startIndex = decompressed.length() - token.matchDistance;
+                if (startIndex < 0 || startIndex >= decompressed.length() || startIndex + token.matchLength > decompressed.length()) {
+                  System.out.println("Decompressed Length: " + decompressed.length());
+                  System.out.println("Start Index: " + startIndex);
+                  System.out.println("Token Match Length: " + token.matchLength);
+                  System.out.println("Token: " + token);     
+                  throw new IllegalArgumentException("Invalid token: " + token);
+                }
+                for (int i = 0; i < token.matchLength; i++) {
+                    decompressed.append(decompressed.charAt(startIndex + i));
+                }
+            }
+            decompressed.append(token.nextChar);
+        }
+        return decompressed.toString();
+    }
+    
+    /**
+     * The Token class represents a token in the compressed text.
+     * Each token has a match distance, match length and next character.
+     */
+    static class Token {
+        final int matchDistance;
+        final int matchLength;
+        final char nextChar;
+
+        /**
+         * Constructs a new token with the given match distance, match length and next character.
+         * 
+         * @param matchDistance The distance to the start of the matching string.
+         * @param matchLength The length of the matching string.
+         * @param nextChar The next character in the text.
+         */
+        Token(int matchDistance, int matchLength, char nextChar) {
+            this.matchDistance = matchDistance;
+            this.matchLength = matchLength;
+            this.nextChar = nextChar;
+        }
+        @Override
+        public String toString() {
+          return "Token [matchDistance=" + matchDistance + ", matchLength=" + matchLength + ", nextChar=" + nextChar + "]";
+    }
+    }
+}
 }
