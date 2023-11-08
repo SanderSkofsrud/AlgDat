@@ -95,7 +95,7 @@ public class Compress {
    * @param outputFile The path to the file to write the compressed data.
    * @throws IOException if an I/O error occurs.
    */
-  public static void compress(String inputFile, String outputFile) throws IOException {
+   public static void compress(String inputFile, String outputFile) throws IOException {
     // LZ78 compression
     String inputData = new String(Files.readAllBytes(Paths.get(inputFile)));
     List<LZ78.Token> lz78Tokens = LZ78.compress(inputData);
@@ -150,7 +150,7 @@ public class Compress {
    * @throws IOException if an I/O error occurs.
    * @throws ClassNotFoundException if the class of a serialized object cannot be found.
    */
-  public static void decompress(String inputFile, String outputFile) throws IOException, ClassNotFoundException {
+ public static void decompress(String inputFile, String outputFile) throws IOException, ClassNotFoundException {
     ObjectInputStream ois = new ObjectInputStream(new FileInputStream(inputFile));
     int[] freq = (int[]) ois.readObject();
     Node root = buildTree(freq);
@@ -158,19 +158,31 @@ public class Compress {
     BitInputStream bis = new BitInputStream(ois);
     ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
 
+    long totalBytes = 0;
+    long processedBytes = 0;
+
+    // Calculate the total bytes to be processed
+    for (int f : freq) {
+        totalBytes += f;
+    }
+
     // Huffman decompression
     while (true) {
-      try {
-        Node x = root;
-        while (!isLeaf(x)) {
-          boolean bit = bis.read();
-          if (bit) x = x.right;
-          else     x = x.left;
+        try {
+            Node x = root;
+            while (!isLeaf(x)) {
+                boolean bit = bis.read();
+                if (bit) x = x.right;
+                else x = x.left;
+            }
+            byteOutput.write(x.ch);
+
+            // Update progress after each byte is processed
+            processedBytes++;
+            printProgressBar(processedBytes, totalBytes);
+        } catch (EOFException e) {
+            break;
         }
-        byteOutput.write(x.ch);
-      } catch (EOFException e) {
-        break;
-      }
     }
     bis.close();
     byte[] lz77CompressedData = byteOutput.toByteArray();
@@ -180,7 +192,14 @@ public class Compress {
     String lz77DecompressedData = LZ78.decompress(lz77Tokens);
     Files.write(Paths.get(outputFile), lz77DecompressedData.getBytes());
 
-  }
+    // Final call to ensure the progress bar shows 100%
+    printProgressBar(totalBytes, totalBytes);
+    System.out.println();
+    System.out.println("Decompression complete"+ "\n");
+    System.out.println("Run command: 'diff + filname + filname' to check for differences");
+    System.out.println("If there is no output, the files are identical");
+}   
+
 
   // Nested classes for bit manipulation
 
@@ -237,7 +256,7 @@ public class Compress {
     private int numBitsRemaining;
     /**
      * Constructs a new BitInputStream from the given ObjectInputStream.
-     *
+     * 
      * @param ois The ObjectInputStream to read from.
      * @throws IOException if an I/O error occurs.
      */
@@ -275,6 +294,9 @@ public class Compress {
     }
   }
 
+
+
+
   /**
    * Utility method to print a progress bar with color.
    *
@@ -297,7 +319,7 @@ public class Compress {
     System.out.print(bar);
   }
 
-
+  
   /**
    * The main method to test the compression and decompression.
    *
@@ -308,12 +330,12 @@ public class Compress {
    */
   public static void main(String[] args) {
 
-
-    if (args.length != 3) {
+    
+     if (args.length != 3) {
       System.out.println("Usage: java Compress.java <action> <input file> <output file>");
       return;
     }
-
+    
     String action = args[0];
     String inputFile = args[1];
     String outputFile = args[2];
@@ -326,8 +348,7 @@ public class Compress {
         compress(inputFile, outputFile);
         long outputFileSize = Files.size(Paths.get(outputFile));
         System.out.println("Compressed file size: " + outputFileSize + " bytes");
-        System.out.println("Compression ratio: " +
-                String.format("%.2f", (double) outputFileSize / inputFileSize * 100) + "%");
+        System.out.printf("Compression ratio: %.2f%%", (double) outputFileSize / inputFileSize * 100);
       } else if ("decompress".equals(action) || "d".equals(action)) {
         decompress(inputFile, outputFile);
       } else {
@@ -345,213 +366,132 @@ public class Compress {
    * takes a list of LZ78 tokens and returns the original text.
    */
 
-  public static class LZ78 {
-    public static class Token {
-      final int index;
-      final char nextChar;
+public class LZ78 {
+    static class Token {
+        final int index;
+        final char nextChar;
 
-      /**
-       * Constructs a new LZ78 token.
-       *
-       * @param index The index of the token.
-       * @param nextChar The next character of the token.
-       */
+        /**
+         * Constructs a new LZ78 token.
+         * 
+         * @param index The index of the token.
+         * @param nextChar The next character of the token.
+         */
 
-      Token(int index, char nextChar) {
-        this.index = index;
-        this.nextChar = nextChar;
-      }
+        Token(int index, char nextChar) {
+            this.index = index;
+            this.nextChar = nextChar;
+        }
 
-      /**
-       * Returns a string representation of the token.
-       */
+        /**
+         * Returns a string representation of the token.
+         */
 
-      @Override
-      public String toString() {
-        return "(" + index + ", '" + nextChar + "')";
-      }
+        @Override
+        public String toString() {
+            return "(" + index + ", '" + nextChar + "')";
+        }
     }
 
     /**
      * Serializes a list of LZ78 tokens to a byte array.
-     *
+     * 
      * @param tokens The list of tokens to serialize.
      * @return The serialized byte array.
      */
     public static byte[] serializeLZ78Tokens(List<LZ78.Token> tokens) {
-      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-      DataOutputStream dataStream = new DataOutputStream(byteStream);
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    DataOutputStream dataStream = new DataOutputStream(byteStream);
 
-      try {
+    try {
         for (LZ78.Token token : tokens) {
-          dataStream.writeInt(token.index);
-          dataStream.writeChar(token.nextChar);
+            dataStream.writeInt(token.index);
+            dataStream.writeChar(token.nextChar);
         }
-      } catch (IOException e) {
+    } catch (IOException e) {
         throw new RuntimeException("Error during LZ78 token serialization", e);
-      }
-
-      return byteStream.toByteArray();
     }
-    /**
-     * Deserializes a list of LZ78 tokens from a byte array.
-     *
-     * @param data The byte array to deserialize.
-     * @return The list of tokens.
-     */
-    public static List<LZ78.Token> deserializeLZ78Tokens(byte[] data) {
-      ByteArrayInputStream byteStream = new ByteArrayInputStream(data);
-      DataInputStream dataStream = new DataInputStream(byteStream);
-      List<LZ78.Token> tokens = new ArrayList<>();
 
-      try {
-        while (dataStream.available() > 0) {
+    return byteStream.toByteArray();
+}
+/**
+ * Deserializes a list of LZ78 tokens from a byte array.
+ * 
+ * @param data The byte array to deserialize.
+ * @return The list of tokens.
+ */
+public static List<LZ78.Token> deserializeLZ78Tokens(byte[] data) {
+  ByteArrayInputStream byteStream = new ByteArrayInputStream(data);
+  DataInputStream dataStream = new DataInputStream(byteStream);
+  List<LZ78.Token> tokens = new ArrayList<>();
+
+  try {
+      while (dataStream.available() > 0) {
           int index = dataStream.readInt();
           char nextChar = dataStream.readChar();
           tokens.add(new LZ78.Token(index, nextChar));
-        }
-      } catch (IOException e) {
-        throw new RuntimeException("Error during LZ78 token deserialization", e);
       }
+  } catch (IOException e) {
+      throw new RuntimeException("Error during LZ78 token deserialization", e);
+  }
 
-      return tokens;
-    }
+  return tokens;
+}
 
 
 
 
     /**
      * Compresses a string using LZ78.
-     *
+     * 
      * @param input The string to compress.
      * @return A list of LZ78 tokens.
      */
 
-    public static List<Token> compress(String input) {
+     public static List<Token> compress(String input) {
       List<Token> tokens = new ArrayList<>();
-      Trie trie = new Trie();
-      StringBuilder current = new StringBuilder();
-
+      List<String> dict = new ArrayList<>();
+      String current = "";
+  
       for (char c : input.toCharArray()) {
-        current.append(c);
-        int index = trie.search(current.toString());
-
-        // If index == -1, the substring is not in the trie
-        if (index == -1) {
-          // Add the current string to the trie and get the index of the last character
-          index = trie.insert(current.toString());
-          tokens.add(new Token(index, c));
-          current.setLength(0); // Reset current
-        }
+          String extended = current + c;
+          int index = dict.indexOf(extended);
+  
+          // If index == -1, the substring is not in the dictionary
+          if (index == -1) {
+              int currentIndex = dict.indexOf(current);
+              tokens.add(new Token(currentIndex == -1 ? 0 : currentIndex + 1, c));
+              dict.add(extended);
+              current = "";
+          } else {
+              current = extended;
+          }
       }
       // Handling the last substring (if any)
-      if (current.length() > 0) {
-        // Since the last substring was not added, its index is the size of the dictionary (trie size)
-        tokens.add(new Token(trie.search(current.toString()), '\0'));
+      if (!current.isEmpty()) {
+          int currentIndex = dict.indexOf(current);
+          tokens.add(new Token(currentIndex == -1 ? 0 : currentIndex + 1, '\0'));
       }
       return tokens;
-    }
-
+  }
     /**
      * Decompresses a list of LZ78 tokens.
-     *
+     * 
      * @param tokens The list of tokens to decompress.
      * @return The decompressed string.
      */
     public static String decompress(List<Token> tokens) {
-      List<String> dict = new ArrayList<>();
-      dict.add("");  // Placeholder for index 0
+        List<String> dict = new ArrayList<>();
+        dict.add("");  // Placeholder for index 0
 
-      StringBuilder output = new StringBuilder();
-      for (Token token : tokens) {
-        String previous = dict.get(token.index);
-        String current = previous + token.nextChar;
-        dict.add(current);
-        output.append(current);
-      }
-      return output.toString();
-    }
-  }
-
-  public static class Trie {
-    private TrieNode root;
-    private int nextIndex; // This will be used to assign indices to nodes
-
-    public Trie() {
-      root = new TrieNode(0); // Root node has index 0
-      nextIndex = 1; // The next index to assign
-    }
-
-    // Inserts a string into the trie and returns the index of the last node
-    public int insert(String word) {
-      TrieNode node = root;
-      for (char c : word.toCharArray()) {
-        TrieNode nextNode = node.get(c);
-        if (nextNode == null) {
-          nextNode = new TrieNode(nextIndex++);
-          node.put(c, nextNode);
+        StringBuilder output = new StringBuilder();
+        for (Token token : tokens) {
+            String previous = dict.get(token.index);
+            String current = previous + token.nextChar;
+            dict.add(current);
+            output.append(current);
         }
-        node = nextNode;
-      }
-      return node.index;
-    }
-
-    // Searches for the string in the trie and returns the index of the last node
-    public int search(String word) {
-      TrieNode node = root;
-      for (char c : word.toCharArray()) {
-        node = node.get(c);
-        if (node == null) {
-          return -1;
-        }
-      }
-      return node.index;
-    }
-
-    public static class TrieNode {
-      private List<TrieNodeEntry> children;
-      public int index; // Index in LZ78 dictionary
-
-      public TrieNode(int index) {
-        this.index = index;
-        this.children = new ArrayList<>();
-      }
-
-      public boolean containsKey(char ch) {
-        for (TrieNodeEntry entry : children) {
-          if (entry.ch == ch) {
-            return true;
-          }
-        }
-        return false;
-      }
-
-      public TrieNode get(char ch) {
-        for (TrieNodeEntry entry : children) {
-          if (entry.ch == ch) {
-            return entry.node;
-          }
-        }
-        return null;
-      }
-
-      public void put(char ch, TrieNode node) {
-        children.add(new TrieNodeEntry(ch, node));
-      }
-
-      public int size() {
-        return children.size();
-      }
-
-      public static class TrieNodeEntry {
-        public char ch;
-        public TrieNode node;
-
-        public TrieNodeEntry(char ch, TrieNode node) {
-          this.ch = ch;
-          this.node = node;
-        }
-      }
+        return output.toString();
     }
   }
 }
