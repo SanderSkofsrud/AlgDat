@@ -4,6 +4,8 @@ import random
 import numpy as np
 import pandas as pd
 import time
+import tkinter
+import tkintermapview as tkmap
 
 
 # Function to read nodes file
@@ -91,11 +93,13 @@ def dijkstra_all_nodes(graph, nodes, start):
 
     Args:
         graph (defaultdict): A graph structure representing road network connectivity.
-        nodes (list): List of node IDs in the graph.
+        nodes (dict): Dictionary mapping node IDs to their coordinates.
         start (int): The starting node for Dijkstra's algorithm.
 
     Returns:
         dict: A dictionary mapping node IDs to their shortest distances from the starting node.
+        int: The total number of nodes processed.
+        dict: A dictionary mapping node IDs to their coordinates.
     """
     # The priority queue
     queue = [(0, start)]
@@ -104,6 +108,7 @@ def dijkstra_all_nodes(graph, nodes, start):
     # Distance from start to start is 0
     distances[start] = 0
     nodes_processed = 0
+    node_coords = {start: nodes[start]}  # Initialize with the starting node's coordinates
 
     while queue:
         # The distance to the current node and the node itself
@@ -123,8 +128,9 @@ def dijkstra_all_nodes(graph, nodes, start):
             if distance < distances[neighbor]:
                 distances[neighbor] = distance
                 heapq.heappush(queue, (distance, neighbor))
+                node_coords[neighbor] = nodes[neighbor]  # Update with the actual neighbor's coordinates
 
-    return distances, nodes_processed
+    return distances, nodes_processed, node_coords
 
 
 # Function to find the nearest points of interest
@@ -190,22 +196,23 @@ def precompute_landmark_distances(graph, nodes, landmarks):
 # A* search using the landmark heuristic
 def a_star_search(graph, nodes, start, target, landmark_distances):
     """
-    Implement the A* search algorithm with a landmark heuristic to find the shortest path from a start node to a target node.
+    Implement the A* search algorithm with a landmark heuristic to find the shortest distance from a start node to a target node.
 
     Args:
         graph (defaultdict): A graph structure representing road network connectivity.
-        nodes (list): List of node IDs in the graph.
+        nodes (dict): Dictionary mapping node IDs to their coordinates.
         start (int): The starting node for the A* search.
         target (int): The target node for the A* search.
         landmark_distances (dict): Precomputed distances from landmarks to all nodes.
 
     Returns:
-        list or None: A list representing the shortest path from the start node to the target node, or None if no path exists.
+        float or None: The shortest distance from the start node to the target node, or None if no path exists.
+        int: The total number of nodes processed.
+        dict: A dictionary mapping node IDs to their coordinates.
+        list: The list of nodes forming the shortest path from start to target.
     """
     # Priority queue for A*
     queue = [(0, start)]
-    # Came from dictionary to reconstruct the path later
-    came_from = {start: None}
     # Cost from start to the node
     g_score = {node: float('infinity') for node in nodes}
     g_score[start] = 0
@@ -213,19 +220,23 @@ def a_star_search(graph, nodes, start, target, landmark_distances):
     f_score = {node: float('infinity') for node in nodes}
     f_score[start] = landmark_heuristic(start, target, landmark_distances)
     nodes_processed = 0
+    node_coords = {start: nodes[start]}  # Initialize with the starting node's coordinates
+    came_from = {}  # To store the path
 
     while queue:
         # Current node is the node in the queue with the lowest estimated cost
         current = heapq.heappop(queue)[1]
         nodes_processed += 1
 
-        # If we've reached our target, we can reconstruct the path
+        # If we've reached our target, reconstruct the path
         if current == target:
             path = []
-            while current:
+            while current in came_from:
                 path.append(current)
                 current = came_from[current]
-            return path[::-1]  # Return reversed path
+            path.append(start)  # Optional: include start node in path
+            path.reverse()  # Reverse the path to be start->target
+            return g_score[target], nodes_processed, node_coords, path
 
         # Look at all the neighbors of this node
         for neighbor, weight in graph[current]:
@@ -235,8 +246,11 @@ def a_star_search(graph, nodes, start, target, landmark_distances):
                 g_score[neighbor] = tentative_g_score
                 f_score[neighbor] = tentative_g_score + landmark_heuristic(neighbor, target, landmark_distances)
                 heapq.heappush(queue, (f_score[neighbor], neighbor))
+                node_coords[neighbor] = nodes[neighbor]  # Update with the actual neighbor's coordinates
 
-    return None  # Return None if there is no path
+    return None, nodes_processed, node_coords, []  # Return None if there is no path
+
+
 
 
 # Heuristic function for A* using the landmark method
@@ -261,8 +275,8 @@ def landmark_heuristic(node, target, landmark_distances):
 
 def run_tests():
     # File paths
-    node_file_path = 'norden/noder.txt'
-    edge_file_path = 'norden/kanter.txt'
+    node_file_path = 'island/noder.txt'
+    edge_file_path = 'island/kanter.txt'
     poi_file_path = 'island/interessepkt.txt'
 
     # Reading the data from the files
@@ -278,21 +292,23 @@ def run_tests():
     landmark_distances = precompute_landmark_distances(graph, nodes_fixed, landmarks)
 
     # Define the start node for testing (change this for the real dataset)
-    start_node_for_test = random.choice(list(nodes_fixed))
+    #start_node_for_test = random.choice(list(nodes_fixed))
     # Define a random target node for testing
-    target_node_for_test = random.choice(list(nodes_fixed))
+    #target_node_for_test = random.choice(list(nodes_fixed))
+    start_node_for_test = 0
+    target_node_for_test = 5
 
     if start_node_for_test == target_node_for_test:
         target_node_for_test += 1
 
     # Running Dijkstra's algorithm
     start_time = time.time()
-    dijkstra_distances, nodes_processed = dijkstra_all_nodes(graph, nodes_fixed, start_node_for_test)
+    dijkstra_distances, nodes_processed, node_coords = dijkstra_all_nodes(graph, nodes_fixed, start_node_for_test)
     dijkstra_time = time.time() - start_time
 
     # Running A* search using the landmark heuristic
     start_time = time.time()
-    a_star_path, nodes_processed_a, *_ = a_star_search(graph, nodes_fixed, start_node_for_test, target_node_for_test,
+    a_star_distance, nodes_processed_a, node_coords_a, path_a = a_star_search(graph, nodes_fixed, start_node_for_test, target_node_for_test,
                                                        landmark_distances)
     a_star_time = time.time() - start_time
 
@@ -300,8 +316,8 @@ def run_tests():
     print(f"Start Node: {start_node_for_test}")
     print(f"Target Node: {target_node_for_test}")
     print(f"Number of Nodes Processed: {nodes_processed}")
-    # print("Dijkstra's Algorithm:")
-    # print(f"Distance: {dijkstra_distances[target_node_for_test]}")
+    print("Dijkstra's Algorithm:")
+    print(f"Distance: {dijkstra_distances[target_node_for_test]}")
     print(f"Time: {dijkstra_time}")
     print()
 
@@ -309,8 +325,8 @@ def run_tests():
     print(f"Start Node: {start_node_for_test}")
     print(f"Target Node: {target_node_for_test}")
     print(f"Number of Nodes Processed: {nodes_processed_a}")
-    # print("A* Search:")
-    # print(f"Path: {a_star_path}")
+    print("A* Search:")
+    print(f"Distance: {a_star_distance}")
     print(f"Time: {a_star_time}")
     print()
 
@@ -322,5 +338,81 @@ def run_tests():
         print(poi)
     print()
 
+    #print(node_coords)
+
+    # Make the list show just the coordinates
+    node_coords_list = []
+    for key in node_coords_a:
+        node_coords_list.append(node_coords_a[key])
+
+    path_list = []
+    for node in path_a:
+        path_list.append(node_coords_a[node])
+    #print(node_coords_list)
+    make_map(node_coords_list, path_list)
+
+
+def make_map(coords, path):
+    global prev
+    root = tkinter.Tk()
+    root.geometry(f"{1000}x{700}")
+    root.title('Map')
+
+    # create map widget
+    map_widget = tkmap.TkinterMapView(root, width=1000, height=700, corner_radius=0)
+    map_widget.pack(fill="both", expand=True)
+
+    map_widget.set_zoom(3)
+
+    new_icon = tkinter.PhotoImage(file="resources/glow_small.png")
+
+    start_marker = map_widget.set_marker(coords[0][0], coords[0][1])
+
+    end_marker = map_widget.set_marker(coords[-1][0], coords[-1][1])
+
+    path_obj = []
+
+    for coord in path:
+        if coord == coords[0] or coord == coords[-1]:
+            continue
+        print(f"Setting marker at {coord[0], coord[1]}")
+        marker = map_widget.set_marker(coord[0], coord[1])
+        path_obj.append(marker)
+        if marker is None:
+            print("Marker is none")
+        else:
+            marker.icon = new_icon
+            if marker.icon != new_icon:
+                print("Icon not set")
+
+    count = 0
+
+    for coord in coords:
+        count += 1
+        print(f"Count: {count}")
+        if coord == coords[0] or coord == coords[-1]:
+            continue
+        if coord in path:
+            continue
+        print(f"Setting marker at {coord[0], coord[1]}")
+        marker = map_widget.set_marker(coord[0], coord[1])
+        if marker is None:
+            print("Marker is none")
+        else:
+            marker.icon = new_icon
+            if marker.icon != new_icon:
+                print("Icon not set")
+
+    for obj in path_obj:
+        if obj == path_obj[0]:
+            map_widget.set_path([start_marker.position, obj.position])
+            prev = obj
+        elif obj == path_obj[-1]:
+            map_widget.set_path([obj.position, end_marker.position])
+        else:
+            map_widget.set_path([prev.position, obj.position])
+            prev = obj
+
+    root.mainloop()
 
 run_tests()
