@@ -36,12 +36,12 @@ public class ALT {
 
       Node start = g.node[2800567]; //   Kårvåg - 3292784
       Node destination = g.node[7705656];   //    Gjemnes - 7352330
-      //Node orkanger = g.node[];
-      //Node trondheimCamping = g.node[];
-      //Node hotellOstersund = g.node[];
-      //Node trondheim = g.node[];
-      //Node selbustrand = g.node[];
-      //Node greenstarHotelLahti = g.node[];
+      Node orkanger = g.node[2266026];
+      Node trondheimCamping = g.node[3005466];
+      Node hotellOstersund = g.node[3240367];
+      Node trondheim = g.node[7826348];
+      Node selbustrand = g.node[5009309];
+      Node greenstarHotelLahti = g.node[999080];
 
       int ladestasjon = 4;
       int spisested = 8;
@@ -94,29 +94,26 @@ public class ALT {
       }
       System.out.println("Alt visited nodes vs dijkstra visited nodes: " + altVisited + '/' + dijkstraVisited);
 
-      System.out.println("Shortest path from Kårvår to Gjemnes using Dijkstra");
-      g.dijkstra(g.node[2800567],g.node[7705656]);
-      System.out.println("Shortest path from Kårvår to Gjemnes using ALT");
-      g.altAlgorithm(g.node[2800567],g.node[7705656]);
+      Node[] ladestasjoner = g.dijkstra(orkanger,ladestasjon,numberOfPoints);
+      Node[] drikkesteder = g.dijkstra(trondheimCamping,drikkested,numberOfPoints);
+      Node[] spisesteder = g.dijkstra(hotellOstersund,spisested,numberOfPoints);
+      System.out.println("Charging stations the closest to Orkanger");
+      Arrays.stream(ladestasjoner).forEach(s-> System.out.println(s.value + ": " +s.name + " with type: " + s.classification));
+      Arrays.stream(ladestasjoner).forEach(System.out::println);
+      System.out.println("\nDrinking places the closest to Trondheim Camping");
+      Arrays.stream(drikkesteder).forEach(s-> System.out.println(s.name + " with type: " + s.classification));
+      Arrays.stream(drikkesteder).forEach(System.out::println);
+      System.out.println("\nEating places the closest to Hotell Östersund");
+      Arrays.stream(spisesteder).forEach(s-> System.out.println(s.name + " with type: " + s.classification));
+      Arrays.stream(spisesteder).forEach(System.out::println);
 
       MapViewer mapViewer = new MapViewer();
-      mapViewer.drawNodes(g.visitedNodes, Color.RED);
-      mapViewer.drawNodes(g.shortestPathNodes, Color.BLUE);
+      mapViewer.updateDijkstra(g.visitedNodesDijkstra, g.shortestPathNodesDijkstra);
+      mapViewer.updateAlt(g.visitedNodesAlt, g.shortestPathNodesAlt);
+      mapViewer.updateLandmarks(g.landmarks);
+      //mapViewer.drawNodes(g.visitedNodesDijkstra, Color.RED);
+      //mapViewer.drawNodes(g.shortestPathNodesDijkstra, Color.BLUE);
       mapViewer.showMap();
-
-//      Node[] ladestasjoner = g.dijkstra(orkanger,ladestasjon,numberOfPoints);
-//      Node[] drikkesteder = g.dijkstra(trondheimCamping,drikkested,numberOfPoints);
-//      Node[] spisesteder = g.dijkstra(hotellOstersund,spisested,numberOfPoints);
-//      System.out.println("Charging stations the closest to Orkanger");
-//      Arrays.stream(ladestasjoner).forEach(s-> System.out.println(s.value + ": " +s.name + " with type: " + s.classification));
-//      Arrays.stream(ladestasjoner).forEach(System.out::println);
-//      System.out.println("\nDrinking places the closest to Trondheim Camping");
-//      Arrays.stream(drikkesteder).forEach(s-> System.out.println(s.name + " with type: " + s.classification));
-//      Arrays.stream(drikkesteder).forEach(System.out::println);
-//      System.out.println("\nEating places the closest to Hotell Östersund
-//      Arrays.stream(spisesteder).forEach(s-> System.out.println(s.name + " with type: " + s.classification));
-//      Arrays.stream(spisesteder).forEach(System.out::println);
-
 
     } catch (IOException e){
       e.printStackTrace();
@@ -238,11 +235,15 @@ public class ALT {
     int[] landmarks;
     int[][] fromLandmark;
     int[][] toLandmark;
-    List<Node> visitedNodes;
-    List<Node> shortestPathNodes;
+    List<Node> visitedNodesDijkstra;
+    List<Node> shortestPathNodesDijkstra;
+    List<Node> visitedNodesAlt;
+    List<Node> shortestPathNodesAlt;
     public Graph(){
-      visitedNodes = new ArrayList<>();
-      shortestPathNodes = new ArrayList<>();
+      visitedNodesDijkstra = new ArrayList<>();
+      shortestPathNodesDijkstra = new ArrayList<>();
+      visitedNodesAlt = new ArrayList<>();
+      shortestPathNodesAlt = new ArrayList<>();
     }
 
     public Graph(BufferedReader br)throws IOException{
@@ -320,6 +321,26 @@ public class ALT {
       }
     }
 
+    public Node[] dijkstra(Node s, int type, int numberOfPoints) {
+      Node[] interestPoints = new Node[numberOfPoints];
+      int counter = 0;
+      visited = new boolean[N];
+      found = new boolean[N];
+      initPrev(s);
+      pq = makePrio(s);
+      found[s.value] = true;
+      while(counter<numberOfPoints){
+        Node n = pq.poll();
+        if ((n.classification & type) == type){
+          interestPoints[counter++]=n;
+        }
+        for(WEdge w = (WEdge)n.edge1; w!= null; w=(WEdge) w.next){
+          shorten(n,w);
+        }
+      }
+      return interestPoints;
+    }
+
     public void dijkstra(Node s) {
       visited = new boolean[N];
       found = new boolean[N];
@@ -338,8 +359,8 @@ public class ALT {
     public void dijkstra(Node start,Node end){
       visited = new boolean[N];
       found = new boolean[N];
-      visitedNodes.clear();
-      shortestPathNodes.clear();
+      visitedNodesDijkstra.clear();
+      shortestPathNodesDijkstra.clear();
 
       initPrev(start);
       pq = makePrio(start);
@@ -348,7 +369,7 @@ public class ALT {
       while(!visited[end.value]){
         Node n = pq.poll();
         visited[n.value]=true;
-        visitedNodes.add(n);
+        visitedNodesDijkstra.add(n);
 
         for(WEdge w = (WEdge)n.edge1; w!= null; w=(WEdge) w.next){
           shorten(n,w);
@@ -357,10 +378,10 @@ public class ALT {
 
       Node n = end;
       while (n != null) {
-        shortestPathNodes.add(n);
+        shortestPathNodesDijkstra.add(n);
         n = ((Prev) n.d).prev;
       }
-      Collections.reverse(shortestPathNodes);
+      Collections.reverse(shortestPathNodesDijkstra);
     }
 
     public void dijkstraTransposed(Node s) {
@@ -418,15 +439,25 @@ public class ALT {
     public void altAlgorithm(Node start, Node end){
       visited = new boolean[N];
       found = new boolean[N];
+      visitedNodesAlt.clear();
+      shortestPathNodesAlt.clear();
       initPrev(start);
       pq = makePrio(start);
       while(!visited[end.value]){
         Node n = pq.poll();
         visited[n.value]=true;
+        visitedNodesAlt.add(n);
         for(WEdge w = (WEdge)n.edge1; w!= null; w=(WEdge) w.next){
           altShorten(n,end, w);
         }
       }
+
+      Node n = end;
+      while (n != null) {
+        shortestPathNodesAlt.add(n);
+        n = ((Prev) n.d).prev;
+      }
+      Collections.reverse(shortestPathNodesAlt);
     }
     private void altShorten(Node n, Node e, WEdge w){
       if(visited[w.to.value]) return;
@@ -542,9 +573,16 @@ public class ALT {
   }
 
   static class MapViewer {
-
     private JMapViewer map;
-
+    private JRadioButton showDijkstraRadioButton;
+    private JRadioButton showAltRadioButton;
+    private List<JRadioButton> landmarkCheckBoxes;
+    private ButtonGroup radioButtonGroup;
+    private List<Node> dijkstraNodes;
+    private List<Node> dijkstraPath;
+    private List<Node> altNodes;
+    private List<Node> altPath;
+    private int[] landmarks;
     public MapViewer() {
       initializeMap();
     }
@@ -576,6 +614,130 @@ public class ALT {
       }, 5);
     }
 
+    private JPanel initializeSidebar() {
+      JPanel sidebar = new JPanel();
+      radioButtonGroup = new ButtonGroup();
+      sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
+
+      // Dijkstra checkbox
+      showDijkstraRadioButton = new JRadioButton("Show Dijkstra");
+      showDijkstraRadioButton.addActionListener(e -> toggleDijkstra());
+      radioButtonGroup.add(showDijkstraRadioButton);
+      sidebar.add(showDijkstraRadioButton);
+
+      // ALT checkbox
+      showAltRadioButton = new JRadioButton("Show ALT");
+      showAltRadioButton.addActionListener(e -> toggleAlt());
+      radioButtonGroup.add(showAltRadioButton);
+      sidebar.add(showAltRadioButton);
+
+      // Landmark checkboxes
+      landmarkCheckBoxes = new ArrayList<>();
+      for (int i = 0; i < landmarks.length; i++) {
+        JRadioButton landmarkRadioButton = new JRadioButton("Show Landmark " + i);
+        int finalI = i;
+        landmarkRadioButton.addActionListener(e -> toggleLandmark(finalI));
+        landmarkCheckBoxes.add(landmarkRadioButton);
+        radioButtonGroup.add(landmarkRadioButton);
+        sidebar.add(landmarkRadioButton);
+      }
+      sidebar.setVisible(true);
+      sidebar.setMinimumSize(new Dimension(100, 600));
+      map.add(sidebar, BorderLayout.WEST);
+
+      return sidebar;
+    }
+
+    public void updateDijkstra(List<Node> n, List<Node> p) {
+      dijkstraNodes = n;
+      dijkstraPath = p;
+    }
+
+    public void updateAlt(List<Node> n, List<Node> p) {
+      altNodes = n;
+      altPath = p;
+    }
+
+    public void updateLandmarks(int[] n) {
+      landmarks = n;
+    }
+
+    private void toggleDijkstra() {
+      if (showDijkstraRadioButton.isSelected()) {
+        map.getMapMarkerList().clear();
+        map.repaint();
+        for (Node node : dijkstraNodes) {
+          if (!dijkstraPath.contains(node)) {
+            double lat = Double.parseDouble(node.latitude);
+            double lon = Double.parseDouble(node.longitude);
+            MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon); // Or your preferred color
+            map.addMapMarker(marker);
+          }
+        }
+
+        for (Node node : dijkstraPath) {
+          double lat = Double.parseDouble(node.latitude);
+          double lon = Double.parseDouble(node.longitude);
+          MapMarkerDot marker = new MapMarkerDot(Color.BLUE, lat, lon); // Or your preferred color
+          map.addMapMarker(marker);
+        }
+      } else {
+        // Code to remove Dijkstra path markers
+        // This can be optimized based on how you're tracking these markers
+        map.getMapMarkerList().clear();
+      }
+      map.repaint();
+    }
+
+
+    private void toggleAlt() {
+      map.getMapMarkerList().clear();
+      map.repaint();
+      if (showAltRadioButton.isSelected()) {
+        for (Node node : altNodes) {
+          if (!altPath.contains(node)) {
+            double lat = Double.parseDouble(node.latitude);
+            double lon = Double.parseDouble(node.longitude);
+            MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon); // Or your preferred color
+            map.addMapMarker(marker);
+          }
+        }
+
+        for (Node node : altPath) {
+          double lat = Double.parseDouble(node.latitude);
+          double lon = Double.parseDouble(node.longitude);
+          MapMarkerDot marker = new MapMarkerDot(Color.BLUE, lat, lon); // Or your preferred color
+          map.addMapMarker(marker);
+        }
+      } else {
+        // Code to remove ALT path markers
+        // This can be optimized based on how you're tracking these markers
+        map.getMapMarkerList().clear();
+      }
+      map.repaint();
+    }
+
+
+    private void toggleLandmark(int landmarkIndex) {
+      if (landmarkCheckBoxes.get(landmarkIndex).isSelected()) {
+        map.getMapMarkerList().clear();
+        map.repaint();
+        // Assuming landmarks is a list of Node objects for landmarks
+        int landmarkInt = landmarks[landmarkIndex];
+        Node landmarkNode = new Node(landmarkInt);
+        double lat = Double.parseDouble(landmarkNode.latitude);
+        double lon = Double.parseDouble(landmarkNode.longitude);
+        MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon); // Or your preferred color
+        map.addMapMarker(marker);
+      } else {
+        // Code to remove landmark marker
+        // This can be optimized based on how you're tracking these markers
+        map.getMapMarkerList().clear();
+      }
+      map.repaint();
+    }
+
+
     public void drawNodes(List<Node> nodes, Color color) {
       for (Node node : nodes) {
         double lat = Double.parseDouble(node.latitude);
@@ -600,9 +762,18 @@ public class ALT {
     }
 
     public void showMap() {
+      //drawNodes(dijkstraNodes, Color.RED);
+      //drawNodes(dijkstraPath, Color.BLUE);
+      //drawNodes(altNodes, Color.GREEN);
+      //drawNodes(altPath, Color.YELLOW);
       JFrame frame = new JFrame("Map Viewer");
       frame.setLayout(new BorderLayout());
+
+      JPanel sidebar = initializeSidebar();
+
+      frame.add(sidebar, BorderLayout.WEST);
       frame.add(map, BorderLayout.CENTER);
+
       frame.setSize(800, 600);
       frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       frame.setVisible(true);
