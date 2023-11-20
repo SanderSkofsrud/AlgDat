@@ -110,7 +110,9 @@ public class ALT {
       MapViewer mapViewer = new MapViewer();
       mapViewer.updateDijkstra(g.visitedNodesDijkstra, g.shortestPathNodesDijkstra);
       mapViewer.updateAlt(g.visitedNodesAlt, g.shortestPathNodesAlt);
-      mapViewer.updateLandmarks(g.landmarks);
+      mapViewer.updateLandmarks(ladestasjoner, "Ladestasjoner");
+      mapViewer.updateLandmarks(drikkesteder, "Drikkesteder");
+      mapViewer.updateLandmarks(spisesteder, "Spisesteder");
       //mapViewer.drawNodes(g.visitedNodesDijkstra, Color.RED);
       //mapViewer.drawNodes(g.shortestPathNodesDijkstra, Color.BLUE);
       mapViewer.showMap();
@@ -322,17 +324,19 @@ public class ALT {
     }
 
     public Node[] dijkstra(Node s, int type, int numberOfPoints) {
-      Node[] interestPoints = new Node[numberOfPoints];
-      int counter = 0;
+      Node[] interestPoints = new Node[numberOfPoints + 1]; // Size adjusted to accommodate the starting node
+      interestPoints[0] = s; // Manually add the starting node
+      int counter = 1; // Start from 1 as the starting node is already added
       visited = new boolean[N];
       found = new boolean[N];
       initPrev(s);
       pq = makePrio(s);
       found[s.value] = true;
-      while(counter<numberOfPoints){
+
+      while(counter < interestPoints.length){
         Node n = pq.poll();
-        if ((n.classification & type) == type){
-          interestPoints[counter++]=n;
+        if (n != s && (n.classification & type) == type) { // Check if not the starting node and matches the type
+          interestPoints[counter++] = n;
         }
         for(WEdge w = (WEdge)n.edge1; w!= null; w=(WEdge) w.next){
           shorten(n,w);
@@ -340,6 +344,7 @@ public class ALT {
       }
       return interestPoints;
     }
+
 
     public void dijkstra(Node s) {
       visited = new boolean[N];
@@ -582,9 +587,11 @@ public class ALT {
     private List<Node> dijkstraPath;
     private List<Node> altNodes;
     private List<Node> altPath;
-    private int[] landmarks;
+    private List<Node[]> landmarks;
+    private List<String> landmarkNames = new ArrayList<>();
     public MapViewer() {
       initializeMap();
+      landmarks = new ArrayList<>();
     }
 
     private void initializeMap() {
@@ -633,8 +640,8 @@ public class ALT {
 
       // Landmark checkboxes
       landmarkCheckBoxes = new ArrayList<>();
-      for (int i = 0; i < landmarks.length; i++) {
-        JRadioButton landmarkRadioButton = new JRadioButton("Show Landmark " + i);
+      for (int i = 0; i < landmarks.size(); i++) {
+        JRadioButton landmarkRadioButton = new JRadioButton("Show " + landmarkNames.get(i));
         int finalI = i;
         landmarkRadioButton.addActionListener(e -> toggleLandmark(finalI));
         landmarkCheckBoxes.add(landmarkRadioButton);
@@ -658,8 +665,9 @@ public class ALT {
       altPath = p;
     }
 
-    public void updateLandmarks(int[] n) {
-      landmarks = n;
+    public void updateLandmarks(Node[] n, String name) {
+      landmarks.add(n);
+      landmarkNames.add(name);
     }
 
     private void toggleDijkstra() {
@@ -723,12 +731,19 @@ public class ALT {
         map.getMapMarkerList().clear();
         map.repaint();
         // Assuming landmarks is a list of Node objects for landmarks
-        int landmarkInt = landmarks[landmarkIndex];
-        Node landmarkNode = new Node(landmarkInt);
-        double lat = Double.parseDouble(landmarkNode.latitude);
-        double lon = Double.parseDouble(landmarkNode.longitude);
-        MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon); // Or your preferred color
-        map.addMapMarker(marker);
+        for (Node node : landmarks.get(landmarkIndex)) {
+          if (node == landmarks.get(landmarkIndex)[0]) {
+            double lat = Double.parseDouble(node.latitude);
+            double lon = Double.parseDouble(node.longitude);
+            MapMarkerDot marker = new MapMarkerDot(Color.BLUE, lat, lon);
+            map.addMapMarker(marker);
+          } else {
+            double lat = Double.parseDouble(node.latitude);
+            double lon = Double.parseDouble(node.longitude);
+            MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon);
+            map.addMapMarker(marker);
+          }
+        }
       } else {
         // Code to remove landmark marker
         // This can be optimized based on how you're tracking these markers
