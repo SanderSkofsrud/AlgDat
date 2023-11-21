@@ -13,15 +13,16 @@ import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
 import javax.swing.*;
 
 /**
- * This class implements the Dijkstra and ALT algorithms for finding shortest paths in a graph.
+ * Main class implementing the Dijkstra and ALT algorithms for finding shortest paths in a graph.
+ * This class handles the entire process including reading graph data from files,
+ * executing pathfinding algorithms, and visualizing the results on a map.
  */
 public class ALT {
   /**
-   * The main method reads a graph and a number of queries from an input file.
-   * Then it calls the Dijkstra and ALT algorithms to solve the queries,
-   * and finally writes the results to an output file.
+   * The main method that orchestrates reading graph data, executing pathfinding algorithms,
+   * and visualizing results.
    *
-   * @param args not used.
+   * @param args Command line arguments, not used in this application.
    */
   public static void main(String[] args) {
     Graph g = new Graph();
@@ -34,8 +35,8 @@ public class ALT {
       g.readEdges(edgesReader);
       g.readInterestPoints(POIReader);
 
-      Node start = g.node[2800567]; //   Kårvåg - 3292784
-      Node destination = g.node[7705656];   //    Gjemnes - 7352330
+      Node start = g.node[5009309]; //   Kårvåg - 3292784
+      Node destination = g.node[999080];   //    Gjemnes - 7352330
       Node orkanger = g.node[2266026];
       Node trondheimCamping = g.node[3005466];
       Node hotellOstersund = g.node[3240367];
@@ -123,11 +124,11 @@ public class ALT {
   }
 
   /**
-   * This method writes the results of the queries to an output file.
+   * Writes the search results of the pathfinding algorithms to a file.
    *
-   * @param destination  the destination node.
-   * @param fw           the file writer.
-   * @throws IOException exception thrown if something goes wrong when writing to the file.
+   * @param destination The end node of the path.
+   * @param fw          FileWriter to write the output to.
+   * @throws IOException If an I/O error occurs.
    */
   private static void writeSearchResults(Node destination, FileWriter fw) throws IOException {
     int index = 0;
@@ -150,10 +151,10 @@ public class ALT {
   }
 
   /**
-   * This method formats the time from seconds to HH:MM:SS.
+   * Formats time from seconds into a human-readable format of HH:MM:SS.
    *
-   * @param timeInSeconds the time in seconds.
-   * @return              the formatted time.
+   * @param timeInSeconds Time in seconds to be formatted.
+   * @return A string representing the formatted time.
    */
   static String formatSeconds(int timeInSeconds)
   {
@@ -168,23 +169,38 @@ public class ALT {
     return HH + ":" + MM + ":" + SS;
   }
 
+  /**
+   * Represents a node in the graph, with properties for edges, data storage, value, geographical coordinates, classification, and name.
+   */
   static class Node{
-    Edge edge1;
-    Object d;
-    int value;
-    String latitude;
-    String longitude;
-    int classification;
-    String name;
+    Edge edge1; // First edge in the linked list of edges
+    Object d; // Data related to the node, typically used for pathfinding
+    int value; // Node identifier
+    String latitude; // Geographical latitude
+    String longitude; // Geographical longitude
+    int classification; // Type or category of the node
+    String name; // Human-readable name of the node
 
-    Node(int i){
-      value=i;
+    /**
+     * Constructs a Node with a specified value.
+     *
+     * @param i The value/identifier for the node.
+     */
+    Node(int i) {
+      value = i;
     }
 
-    Node(int i, String latitude, String longitude){
-      value=i;
-      this.latitude=latitude;
-      this.longitude=longitude;
+    /**
+     * Constructs a Node with specified value and geographical coordinates.
+     *
+     * @param i         The value/identifier for the node.
+     * @param latitude  The geographical latitude of the node.
+     * @param longitude The geographical longitude of the node.
+     */
+    Node(int i, String latitude, String longitude) {
+      value = i;
+      this.latitude = latitude;
+      this.longitude = longitude;
     }
 
     @Override
@@ -193,54 +209,92 @@ public class ALT {
     }
   }
 
+  /**
+   * Represents an edge in the graph, containing references to a destination node and the next edge in the linked list.
+   */
   static class Edge{
-    Node to;
-    Edge next;
-    Edge(Node n, Edge nxt){
-      to=n;
-      next=nxt;
+    Node to; // Destination node of this edge
+    Edge next; // Next edge in the list
+    /**
+     * Constructs an Edge with a specified destination node and the next edge.
+     *
+     * @param n   The destination node of the edge.
+     * @param nxt The next edge in the linked list.
+     */
+    Edge(Node n, Edge nxt) {
+      to = n;
+      next = nxt;
     }
   }
 
+  /**
+   * A specialized Edge class that includes a weight for the edge, used in pathfinding algorithms.
+   */
   static class WEdge extends Edge {
-    int weight;
-    public WEdge(Node n, WEdge nxt, int wght){
-      super(n,nxt);
-      weight=wght;
+    int weight; // Weight or cost associated with this edge
+
+    /**
+     * Constructs a weighted edge with specified destination node, next edge, and weight.
+     *
+     * @param n    The destination node of the edge.
+     * @param nxt  The next edge in the linked list.
+     * @param wght The weight/cost associated with this edge.
+     */
+    public WEdge(Node n, WEdge nxt, int wght) {
+      super(n, nxt);
+      weight = wght;
     }
   }
 
+  /**
+   * Represents pathfinding data for a node, used in graph traversal algorithms.
+   */
   static class Prev {
-    int dist;
-    int estimate;
-    Node prev;
-    static int inf = 100000000;
+    int dist; // Distance from the source node
+    int estimate; // Estimated distance to the destination node (used in ALT algorithm)
+    Node prev; // Reference to the previous node in the path
+    static final int inf = 100000000; // Represents an infinite distance
 
-    public Prev(){
-      dist=inf;
-      estimate=0;
+    /**
+     * Constructs a Prev object with default values.
+     */
+    public Prev() {
+      dist = inf;
+      estimate = 0;
     }
 
+    /**
+     * Calculates the total estimated distance to the destination node.
+     *
+     * @return Total distance considering both distance and estimate.
+     */
     public int getDistance() {
-      return this.dist+this.estimate;
+      return this.dist + this.estimate;
     }
   }
 
+  /**
+   * Represents the graph structure, containing nodes, edges, and methods for graph processing and pathfinding algorithms.
+   */
   static class Graph {
-    int N, K, P;
-    Node[] node;
-    Node[] transposed;
-    boolean[] visited;
-    boolean[] found;
-    PriorityQueue<Node> pq;
-    HashMap<String, Node> interestPoints;
-    int[] landmarks;
-    int[][] fromLandmark;
-    int[][] toLandmark;
-    List<Node> visitedNodesDijkstra;
-    List<Node> shortestPathNodesDijkstra;
-    List<Node> visitedNodesAlt;
-    List<Node> shortestPathNodesAlt;
+    int N, K, P; // Number of nodes, edges, and points of interest
+    Node[] node; // Array of nodes
+    Node[] transposed; // Array of transposed nodes
+    boolean[] visited; // Array of booleans indicating whether a node has been visited
+    boolean[] found; // Array of booleans indicating whether a node has been found
+    PriorityQueue<Node> pq; // Priority queue used in pathfinding algorithms
+    HashMap<String, Node> interestPoints; // Map of interest points, with the name as key and the node as value
+    int[] landmarks; // Array of landmark nodes
+    int[][] fromLandmark; // Array of distances from landmarks to all nodes
+    int[][] toLandmark; // Array of distances to landmarks from all nodes
+    List<Node> visitedNodesDijkstra; // List of visited nodes in Dijkstra's algorithm
+    List<Node> shortestPathNodesDijkstra; // List of nodes in the shortest path in Dijkstra's algorithm
+    List<Node> visitedNodesAlt; // List of visited nodes in the ALT algorithm
+    List<Node> shortestPathNodesAlt; // List of nodes in the shortest path in the ALT algorithm
+
+    /**
+     * Default constructor to initialize graph-related structures.
+     */
     public Graph(){
       visitedNodesDijkstra = new ArrayList<>();
       shortestPathNodesDijkstra = new ArrayList<>();
@@ -248,6 +302,12 @@ public class ALT {
       shortestPathNodesAlt = new ArrayList<>();
     }
 
+    /**
+     * Constructs a Graph from a BufferedReader, reading graph data.
+     *
+     * @param br BufferedReader to read graph data from.
+     * @throws IOException If an I/O error occurs while reading.
+     */
     public Graph(BufferedReader br)throws IOException{
       visited = new boolean[N];
       found = new boolean[N];
@@ -255,6 +315,12 @@ public class ALT {
       newGraph(br);
     }
 
+    /**
+     * Initializes a new graph with data read from a BufferedReader.
+     *
+     * @param br BufferedReader containing the graph data.
+     * @throws IOException If an I/O error occurs while reading.
+     */
     public void newGraph(BufferedReader br)throws IOException {
       StringTokenizer st = new StringTokenizer(br.readLine());
       N=Integer.parseInt(st.nextToken());
@@ -271,6 +337,12 @@ public class ALT {
       }
     }
 
+    /**
+     * Reads node data from a BufferedReader and populates the graph with nodes.
+     *
+     * @param br BufferedReader to read node data from.
+     * @throws IOException If an I/O error occurs while reading.
+     */
     void readNodes(BufferedReader br) throws IOException {
       System.out.println("Reading nodes");
       StringTokenizer st = new StringTokenizer(br.readLine());
@@ -287,6 +359,12 @@ public class ALT {
       }
     }
 
+    /**
+     * Reads edge data from a BufferedReader and adds edges to the graph.
+     *
+     * @param br BufferedReader to read edge data from.
+     * @throws IOException If an I/O error occurs while reading.
+     */
     void readEdges(BufferedReader br) throws IOException {
       System.out.println("Reading edges");
       StringTokenizer st = new StringTokenizer(br.readLine());
@@ -304,6 +382,12 @@ public class ALT {
       }
     }
 
+    /**
+     * Reads interest points from a BufferedReader and maps them to corresponding nodes in the graph.
+     *
+     * @param br BufferedReader to read interest points from.
+     * @throws IOException If an I/O error occurs while reading.
+     */
     void readInterestPoints(BufferedReader br) throws IOException {
       System.out.println("Reading interest points");
       interestPoints=new HashMap<>();
@@ -323,6 +407,14 @@ public class ALT {
       }
     }
 
+    /**
+     * Executes Dijkstra's algorithm to find the nearest points of a specified type from a starting node.
+     *
+     * @param s              The starting node.
+     * @param type           The type of points to find.
+     * @param numberOfPoints The number of points to find.
+     * @return An array of nodes representing the nearest points of the specified type.
+     */
     public Node[] dijkstra(Node s, int type, int numberOfPoints) {
       Node[] interestPoints = new Node[numberOfPoints + 1]; // Size adjusted to accommodate the starting node
       interestPoints[0] = s; // Manually add the starting node
@@ -345,7 +437,11 @@ public class ALT {
       return interestPoints;
     }
 
-
+    /**
+     * Executes the standard Dijkstra's algorithm from a starting node to explore the graph.
+     *
+     * @param s The starting node.
+     */
     public void dijkstra(Node s) {
       visited = new boolean[N];
       found = new boolean[N];
@@ -361,6 +457,12 @@ public class ALT {
       }
     }
 
+    /**
+     * Executes Dijkstra's algorithm from a start node to an end node and stores the path.
+     *
+     * @param start The starting node.
+     * @param end   The destination node.
+     */
     public void dijkstra(Node start,Node end){
       visited = new boolean[N];
       found = new boolean[N];
@@ -389,6 +491,11 @@ public class ALT {
       Collections.reverse(shortestPathNodesDijkstra);
     }
 
+    /**
+     * Executes Dijkstra's algorithm on the transposed graph starting from a node.
+     *
+     * @param s The starting node.
+     */
     public void dijkstraTransposed(Node s) {
       visited = new boolean[N];
       found = new boolean[N];
@@ -403,6 +510,11 @@ public class ALT {
       }
     }
 
+    /**
+     * Initializes the Prev objects for each node in the graph with respect to a transposed graph starting from a given node.
+     *
+     * @param s The starting node for the pathfinding.
+     */
     private void initPrevTransposed(Node s){
       for(int i=N; i-->0;){
         transposed[i].d=new Prev();
@@ -410,12 +522,24 @@ public class ALT {
       ((Prev)s.d).dist=0;
     }
 
+    /**
+     * Initializes the Prev objects for each node in the graph starting from a given node.
+     *
+     * @param s The starting node for the pathfinding.
+     */
     private void initPrev(Node s){
       for(int i=N; i-->0;){
         node[i].d=new Prev();
       }
       ((Prev)s.d).dist=0;
     }
+
+    /**
+     * Attempts to shorten the path to a node based on a given edge and updates the pathfinding data.
+     *
+     * @param n Node from which the edge originates.
+     * @param w The weighted edge to consider for shortening the path.
+     */
     private void shorten(Node n, WEdge w){
       if(visited[w.to.value]) return;
 
@@ -435,12 +559,24 @@ public class ALT {
       }
     }
 
+    /**
+     * Creates and returns a priority queue for nodes based on their distance estimations, starting with a given node.
+     *
+     * @param s The starting node for the priority queue.
+     * @return A PriorityQueue of Node objects ordered by their distance estimations.
+     */
     private PriorityQueue<Node> makePrio(Node s){
       PriorityQueue<Node> pq = new PriorityQueue<>(N, Comparator.comparingInt(a -> ((Prev) a.d).getDistance()));
       pq.add(s);
       return pq;
     }
 
+    /**
+     * Executes the ALT (A* Landmark) algorithm for pathfinding between two nodes.
+     *
+     * @param start The starting node.
+     * @param end   The destination node.
+     */
     public void altAlgorithm(Node start, Node end){
       visited = new boolean[N];
       found = new boolean[N];
@@ -464,6 +600,14 @@ public class ALT {
       }
       Collections.reverse(shortestPathNodesAlt);
     }
+
+    /**
+     * Attempts to shorten the path to a node using the ALT heuristic, considering a given edge.
+     *
+     * @param n Node from which the edge originates.
+     * @param e The end node of the pathfinding process.
+     * @param w The weighted edge to consider for shortening the path.
+     */
     private void altShorten(Node n, Node e, WEdge w){
       if(visited[w.to.value]) return;
       Prev nd = (Prev)n.d;
@@ -481,6 +625,12 @@ public class ALT {
       }
     }
 
+    /**
+     * Calculates and sets the heuristic estimate for a node in the context of the ALT algorithm.
+     *
+     * @param n       The node for which to calculate the estimate.
+     * @param endNode The destination node of the pathfinding process.
+     */
     private void calculateEstimate(Node n, Node endNode) {
       int largestEstimate = 0;
       int previous = -1;
@@ -494,6 +644,13 @@ public class ALT {
       if (largestEstimate > 0) ((Prev)n.d).estimate = largestEstimate;
     }
 
+    /**
+     * Preprocesses the map by running Dijkstra's algorithm from each landmark, storing distances for the ALT algorithm.
+     *
+     * @param landmarks An array of landmark names to be used in preprocessing.
+     * @param filename  The filename to save the preprocessed data.
+     * @throws IOException If an I/O error occurs while writing to the file.
+     */
     public void preprocessMap(String[] landmarks, String filename) throws IOException{
       System.out.println("Preprocessing...");
       int[][] dijkstraLengths = new int[landmarks.length][N];
@@ -538,6 +695,12 @@ public class ALT {
       fw.close();
     }
 
+    /**
+     * Reads preprocessed map data from a file, which includes distances from and to landmarks for the ALT algorithm.
+     *
+     * @param filename The filename from which to read the preprocessed data.
+     * @throws IOException If an I/O error occurs while reading from the file.
+     */
     public void readPreProcessedMap(String filename) throws IOException {
       BufferedReader br = new BufferedReader(new FileReader(filename));
       StringTokenizer str = new StringTokenizer(br.readLine());
@@ -567,33 +730,55 @@ public class ALT {
       System.out.println("Pre processed map was read");
     }
 
-
+    /**
+     * Finds a node in the graph based on its name.
+     *
+     * @param s The name of the node to find.
+     * @return The node with the specified name.
+     */
     public Node findInterestPoints(String s){
       return interestPoints.get(s);
     }
 
+    /**
+     * Finds a node in the transposed graph based on its name.
+     *
+     * @param s The name of the node to find.
+     * @return The node with the specified name.
+     */
     public Node findTransposedInterestPoint(String s){
       return transposed[interestPoints.get(s).value];
     }
   }
 
+  /**
+   * Manages the visualization of the map and the display of the paths and points on it.
+   * This class uses JMapViewer to render the map and display paths calculated by the pathfinding algorithms.
+   */
   static class MapViewer {
-    private JMapViewer map;
-    private JRadioButton showDijkstraRadioButton;
-    private JRadioButton showAltRadioButton;
-    private List<JRadioButton> landmarkCheckBoxes;
-    private ButtonGroup radioButtonGroup;
-    private List<Node> dijkstraNodes;
-    private List<Node> dijkstraPath;
-    private List<Node> altNodes;
-    private List<Node> altPath;
-    private List<Node[]> landmarks;
-    private List<String> landmarkNames = new ArrayList<>();
+    private JMapViewer map; // The map
+    private JRadioButton showDijkstraRadioButton; // Radio button for showing Dijkstra's path
+    private JRadioButton showAltRadioButton; // Radio button for showing the ALT path
+    private List<JRadioButton> landmarkRadioButtons; // Radio buttons for showing landmark paths
+    private ButtonGroup radioButtonGroup; // Button group for radio buttons
+    private List<Node> dijkstraNodes; // List of visited nodes in Dijkstra's algorithm
+    private List<Node> dijkstraPath; // List of nodes in the shortest path in Dijkstra's algorithm
+    private List<Node> altNodes; // List of visited nodes in the ALT algorithm
+    private List<Node> altPath; // List of nodes in the shortest path in the ALT algorithm
+    private List<Node[]> landmarks; // List of landmark nodes
+    private List<String> landmarkNames = new ArrayList<>(); // List of landmark names
+
+    /**
+     * Constructor initializes the map and structures used for visualization.
+     */
     public MapViewer() {
       initializeMap();
       landmarks = new ArrayList<>();
     }
 
+    /**
+     * Initializes the map settings and configures its default state.
+     */
     private void initializeMap() {
       map = new JMapViewer();
       map.setTileSource(new OsmTileSource.Mapnik());
@@ -621,6 +806,11 @@ public class ALT {
       }, 5);
     }
 
+    /**
+     * Initializes and returns the sidebar for the map interface, providing user controls.
+     *
+     * @return JPanel containing the sidebar with controls.
+     */
     private JPanel initializeSidebar() {
       JPanel sidebar = new JPanel();
       radioButtonGroup = new ButtonGroup();
@@ -639,12 +829,12 @@ public class ALT {
       sidebar.add(showAltRadioButton);
 
       // Landmark checkboxes
-      landmarkCheckBoxes = new ArrayList<>();
+      landmarkRadioButtons = new ArrayList<>();
       for (int i = 0; i < landmarks.size(); i++) {
         JRadioButton landmarkRadioButton = new JRadioButton("Show " + landmarkNames.get(i));
         int finalI = i;
         landmarkRadioButton.addActionListener(e -> toggleLandmark(finalI));
-        landmarkCheckBoxes.add(landmarkRadioButton);
+        landmarkRadioButtons.add(landmarkRadioButton);
         radioButtonGroup.add(landmarkRadioButton);
         sidebar.add(landmarkRadioButton);
       }
@@ -655,21 +845,42 @@ public class ALT {
       return sidebar;
     }
 
+    /**
+     * Updates the map with nodes and paths found by Dijkstra's algorithm.
+     *
+     * @param n List of nodes visited during Dijkstra's algorithm.
+     * @param p List of nodes forming the shortest path found by Dijkstra's algorithm.
+     */
     public void updateDijkstra(List<Node> n, List<Node> p) {
       dijkstraNodes = n;
       dijkstraPath = p;
     }
 
+    /**
+     * Updates the map with nodes and paths found by the ALT algorithm.
+     *
+     * @param n List of nodes visited during the ALT algorithm.
+     * @param p List of nodes forming the shortest path found by the ALT algorithm.
+     */
     public void updateAlt(List<Node> n, List<Node> p) {
       altNodes = n;
       altPath = p;
     }
 
+    /**
+     * Updates the map with landmark points.
+     *
+     * @param n    Array of nodes representing landmarks.
+     * @param name The name of the landmark group.
+     */
     public void updateLandmarks(Node[] n, String name) {
       landmarks.add(n);
       landmarkNames.add(name);
     }
 
+    /**
+     * Toggles the display of the Dijkstra path on the map.
+     */
     private void toggleDijkstra() {
       if (showDijkstraRadioButton.isSelected()) {
         map.getMapMarkerList().clear();
@@ -678,7 +889,7 @@ public class ALT {
           if (!dijkstraPath.contains(node)) {
             double lat = Double.parseDouble(node.latitude);
             double lon = Double.parseDouble(node.longitude);
-            MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon); // Or your preferred color
+            MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon);
             map.addMapMarker(marker);
           }
         }
@@ -686,18 +897,18 @@ public class ALT {
         for (Node node : dijkstraPath) {
           double lat = Double.parseDouble(node.latitude);
           double lon = Double.parseDouble(node.longitude);
-          MapMarkerDot marker = new MapMarkerDot(Color.BLUE, lat, lon); // Or your preferred color
+          MapMarkerDot marker = new MapMarkerDot(Color.BLUE, lat, lon);
           map.addMapMarker(marker);
         }
       } else {
-        // Code to remove Dijkstra path markers
-        // This can be optimized based on how you're tracking these markers
         map.getMapMarkerList().clear();
       }
       map.repaint();
     }
 
-
+    /**
+     * Toggles the display of the ALT path on the map.
+     */
     private void toggleAlt() {
       map.getMapMarkerList().clear();
       map.repaint();
@@ -706,7 +917,7 @@ public class ALT {
           if (!altPath.contains(node)) {
             double lat = Double.parseDouble(node.latitude);
             double lon = Double.parseDouble(node.longitude);
-            MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon); // Or your preferred color
+            MapMarkerDot marker = new MapMarkerDot(Color.RED, lat, lon);
             map.addMapMarker(marker);
           }
         }
@@ -714,23 +925,24 @@ public class ALT {
         for (Node node : altPath) {
           double lat = Double.parseDouble(node.latitude);
           double lon = Double.parseDouble(node.longitude);
-          MapMarkerDot marker = new MapMarkerDot(Color.BLUE, lat, lon); // Or your preferred color
+          MapMarkerDot marker = new MapMarkerDot(Color.BLUE, lat, lon);
           map.addMapMarker(marker);
         }
       } else {
-        // Code to remove ALT path markers
-        // This can be optimized based on how you're tracking these markers
         map.getMapMarkerList().clear();
       }
       map.repaint();
     }
 
-
+    /**
+     * Toggles the display of a specific landmark group on the map.
+     *
+     * @param landmarkIndex The index of the landmark group to toggle.
+     */
     private void toggleLandmark(int landmarkIndex) {
-      if (landmarkCheckBoxes.get(landmarkIndex).isSelected()) {
+      if (landmarkRadioButtons.get(landmarkIndex).isSelected()) {
         map.getMapMarkerList().clear();
         map.repaint();
-        // Assuming landmarks is a list of Node objects for landmarks
         for (Node node : landmarks.get(landmarkIndex)) {
           if (node == landmarks.get(landmarkIndex)[0]) {
             double lat = Double.parseDouble(node.latitude);
@@ -745,42 +957,15 @@ public class ALT {
           }
         }
       } else {
-        // Code to remove landmark marker
-        // This can be optimized based on how you're tracking these markers
         map.getMapMarkerList().clear();
       }
       map.repaint();
     }
 
-
-    public void drawNodes(List<Node> nodes, Color color) {
-      for (Node node : nodes) {
-        double lat = Double.parseDouble(node.latitude);
-        double lon = Double.parseDouble(node.longitude);
-        MapMarkerDot marker = new MapMarkerDot(color, lat, lon);
-        map.addMapMarker(marker);
-      }
-    }
-
-    public void drawRoute(List<Coordinate> routeCoordinates) {
-      List<MapMarker> routeMarkers = new ArrayList<>();
-      for (Coordinate coord : routeCoordinates) {
-        routeMarkers.add(new MapMarkerDot(coord.getLat(), coord.getLon()));
-      }
-
-      MapPolygonImpl routeLine = new MapPolygonImpl(routeMarkers);
-      map.addMapPolygon(routeLine);
-
-      for (MapMarker marker : routeMarkers) {
-        map.addMapMarker(marker);
-      }
-    }
-
+    /**
+     * Shows the map with the current settings and visualizations.
+     */
     public void showMap() {
-      //drawNodes(dijkstraNodes, Color.RED);
-      //drawNodes(dijkstraPath, Color.BLUE);
-      //drawNodes(altNodes, Color.GREEN);
-      //drawNodes(altPath, Color.YELLOW);
       JFrame frame = new JFrame("Map Viewer");
       frame.setLayout(new BorderLayout());
 
@@ -792,24 +977,6 @@ public class ALT {
       frame.setSize(800, 600);
       frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       frame.setVisible(true);
-    }
-
-    public static class Coordinate {
-      private double lat;
-      private double lon;
-
-      public Coordinate(double lat, double lon) {
-        this.lat = lat;
-        this.lon = lon;
-      }
-
-      public double getLat() {
-        return lat;
-      }
-
-      public double getLon() {
-        return lon;
-      }
     }
   }
 }
