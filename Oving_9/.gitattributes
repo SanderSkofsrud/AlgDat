@@ -1,0 +1,2 @@
+norden/kanter.txt filter=lfs diff=lfs merge=lfs -text
+norden/noder.txt filter=lfs diff=lfs merge=lfs -text
